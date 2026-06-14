@@ -1,72 +1,165 @@
-import pygame
 import math
-from src.game.player import Player
-from src.game.map import GameMap
-from settings import SCREEN_WIDTH, SCREEN_HEIGHT, FPS, PLAYER_SPEED
+import pygame
+
+from settings import FPS, PLAYER_SPEED, SCREEN_HEIGHT, SCREEN_WIDTH
+from src.game.bullet import Bullet
 from src.game.camera import Camera
+from src.game.map import GameMap
+from src.game.player import Player
+from src.game.ui import GameUI
+
 
 class Game:
     def __init__(self) -> None:
-        pygame.init() 
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        pygame.init()
+        pygame.mouse.set_visible(False)
+
+        self.screen = pygame.display.set_mode(
+            (SCREEN_WIDTH, SCREEN_HEIGHT)
+        )
+
+        pygame.display.set_caption("Shooters2D")
+
         self.clock = pygame.time.Clock()
         self.running = True
-        self.player = Player()
+
+        self.player = Player(
+            player_id=1,
+            position=(300, 300),
+            team="attackers",
+            name="Jackson"
+        )
+
         self.game_map = GameMap()
         self.camera = Camera()
-    
+        self.ui = GameUI()
+        self.bullets = []
+
     def run(self) -> None:
         while self.running:
             delta_time = self.clock.tick(FPS) / 1000
+
             self.handle_events()
             self.update(delta_time)
             self.draw()
 
         pygame.quit()
-    
-    def handle_events(self):
+
+    def handle_events(self) -> None:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
 
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    self.player.start_reload()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    if self.player.is_reloading:
+                        self.player.cancel_reload()
+
+                    # Immediately attempts to fire on the click
+                    self.fire_bullet()
+
         keys = pygame.key.get_pressed()
 
-        speed = PLAYER_SPEED
         dx = 0
         dy = 0
 
         if keys[pygame.K_w]:
-            dy -= speed
+            dy -= 1
         if keys[pygame.K_s]:
-            dy += speed
+            dy += 1
         if keys[pygame.K_a]:
-            dx -= speed
+            dx -= 1
             self.player.face_left()
         if keys[pygame.K_d]:
-            dx += speed
+            dx += 1
             self.player.face_right()
 
-        # Prevent diagonal movement from being faster
         if dx != 0 and dy != 0:
-            diagonal_speed = speed / math.sqrt(2)
-            dx *= diagonal_speed
-            dy *= diagonal_speed
-        else:
-            dx *= speed
-            dy *= speed
+            dx /= math.sqrt(2)
+            dy /= math.sqrt(2)
 
-        self.player.change_xpos(dx)
-        self.player.change_ypos(dy)
+        self.player.move(
+            dx * PLAYER_SPEED,
+            dy * PLAYER_SPEED,
+            self.game_map.walls
+        )
 
-    def update(self, delta_time):
-        self.camera.update(self.player.rect)
+    def update(self, delta_time: float) -> None:
+        # Update reload and fire-rate timers
+        self.player.update(delta_time)
 
-    def draw(self):
-        pygame.display.set_caption("Shooters2D")
+        # Keep camera centred on the player
+        self.camera.update(self.player.hitbox)
+
+        # Hold left mouse button to continuously fire
+        mouse_buttons = pygame.mouse.get_pressed()
+
+        if mouse_buttons[0] and not self.player.is_reloading:
+            self.fire_bullet()
+
+        # Move bullets and check wall collisions
+        for bullet in self.bullets:
+            bullet.update(
+                delta_time,
+                self.game_map.walls
+            )
+
+        # Remove bullets that are no longer active
+        self.bullets = [
+            bullet
+            for bullet in self.bullets
+            if bullet.alive
+        ]
+
+    def draw(self) -> None:
         self.screen.fill("white")
-        self.game_map.draw(self.screen, self.camera)
-        self.player.draw(self.screen, self.camera)
-        
+
+        self.game_map.draw(
+            self.screen,
+            self.camera
+        )
+
+        for bullet in self.bullets:
+            bullet.draw(
+                self.screen,
+                self.camera
+            )
+
+        self.player.draw(
+            self.screen,
+            self.camera
+        )
+
+        self.ui.draw(
+            self.screen,
+            self.player,
+            self.camera,
+            self.game_map.walls
+        )
 
         pygame.display.flip()
-        self.clock.tick(60)
+    
+    def fire_bullet(self) -> None:
+        if not self.player.shoot():
+            return
+
+        mouse_screen_position = pygame.Vector2(
+            pygame.mouse.get_pos()
+        )
+
+        mouse_world_position = (
+            mouse_screen_position + self.camera.offset
+        )
+
+        bullet = Bullet(
+            self.player.hitbox.center,
+            mouse_world_position,
+            owner_id=self.player.player_id,
+            team=self.player.team
+        )
+
+        self.bullets.append(bullet)
