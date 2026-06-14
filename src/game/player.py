@@ -1,4 +1,5 @@
 import pygame
+from settings import PLAYER_SPEED, PLAYER_SIZE
 
 
 class Player:
@@ -9,7 +10,7 @@ class Player:
 
         self.original_image = pygame.transform.scale(
             self.original_image,
-            (100, 100)
+            (PLAYER_SIZE, PLAYER_SIZE)
         )
 
         self.image_right = self.original_image
@@ -21,6 +22,8 @@ class Player:
 
         self.image = self.image_right
         self.rect = self.image.get_rect(center=(300, 300))
+
+        self.speed = PLAYER_SPEED
 
     def get_health(self):
         return self.health
@@ -61,8 +64,8 @@ class Player:
     def change_health(self, delta):
         self.health += delta
 
-    def draw(self, screen):
-        screen.blit(self.image, self.rect)
+    def draw(self, screen, camera):
+        screen.blit(self.image, camera.apply(self.rect))
 
     def face_left(self):
         self.image = self.image_left

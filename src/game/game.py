@@ -1,19 +1,25 @@
 import pygame
 import math
 from src.game.player import Player
+from src.game.map import GameMap
+from settings import SCREEN_WIDTH, SCREEN_HEIGHT, FPS, PLAYER_SPEED
+from src.game.camera import Camera
 
 class Game:
     def __init__(self) -> None:
         pygame.init() 
-        self.screen = pygame.display.set_mode((1280, 1024))
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.clock = pygame.time.Clock()
         self.running = True
         self.player = Player()
+        self.game_map = GameMap()
+        self.camera = Camera()
     
     def run(self) -> None:
         while self.running:
+            delta_time = self.clock.tick(FPS) / 1000
             self.handle_events()
-            self.update()
+            self.update(delta_time)
             self.draw()
 
         pygame.quit()
@@ -25,19 +31,19 @@ class Game:
 
         keys = pygame.key.get_pressed()
 
-        speed = 5
+        speed = PLAYER_SPEED
         dx = 0
         dy = 0
 
         if keys[pygame.K_w]:
-            dy -= 1
+            dy -= speed
         if keys[pygame.K_s]:
-            dy += 1
+            dy += speed
         if keys[pygame.K_a]:
-            dx -= 1
+            dx -= speed
             self.player.face_left()
         if keys[pygame.K_d]:
-            dx += 1
+            dx += speed
             self.player.face_right()
 
         # Prevent diagonal movement from being faster
@@ -52,14 +58,15 @@ class Game:
         self.player.change_xpos(dx)
         self.player.change_ypos(dy)
 
-    def update(self):
-        pass
+    def update(self, delta_time):
+        self.camera.update(self.player.rect)
 
     def draw(self):
         pygame.display.set_caption("Shooters2D")
         self.screen.fill("white")
-
-        self.player.draw(self.screen)
+        self.game_map.draw(self.screen, self.camera)
+        self.player.draw(self.screen, self.camera)
+        
 
         pygame.display.flip()
         self.clock.tick(60)
