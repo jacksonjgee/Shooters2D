@@ -18,9 +18,6 @@ class GameUI:
             start + direction * self.aim_distance
         )
 
-        closest_point = intended_end
-        closest_distance = self.aim_distance
-
         for wall in walls:
             collision = wall.clipline(
                 start.x,
