@@ -23,26 +23,76 @@ class Bullet:
         self.radius = 5
         self.alive = True
 
-    def update(self, delta_time, walls):
+    def update(self, delta_time, walls, players):
         old_position = self.position.copy()
 
         movement = self.direction * self.speed * delta_time
         new_position = old_position + movement
 
+        closest_distance = movement.length()
+        collision_target = None
+
+        # Check walls
         for wall in walls:
-            collision_line = wall.inflate(
+            expanded_wall = wall.inflate(
                 self.radius * 2,
                 self.radius * 2
             )
 
-            if collision_line.clipline(
+            collision = expanded_wall.clipline(
                 old_position.x,
                 old_position.y,
                 new_position.x,
                 new_position.y
-            ):
-                self.alive = False
-                return
+            )
+
+            if collision:
+                collision_point = pygame.Vector2(collision[0])
+                distance = old_position.distance_to(collision_point)
+
+                if distance < closest_distance:
+                    closest_distance = distance
+                    collision_target = "wall"
+
+        # Check players
+        for player in players:
+            if not player.alive:
+                continue
+
+            # Do not hit the player who fired the bullet
+            if player.player_id == self.owner_id:
+                continue
+
+            # Prevent friendly fire
+            if player.team == self.team:
+                continue
+
+            expanded_hitbox = player.hitbox.inflate(
+                self.radius * 2,
+                self.radius * 2
+            )
+
+            collision = expanded_hitbox.clipline(
+                old_position.x,
+                old_position.y,
+                new_position.x,
+                new_position.y
+            )
+
+            if collision:
+                collision_point = pygame.Vector2(collision[0])
+                distance = old_position.distance_to(collision_point)
+
+                if distance < closest_distance:
+                    closest_distance = distance
+                    collision_target = player
+
+        if collision_target is not None:
+            if collision_target != "wall":
+                collision_target.take_damage(self.damage)
+
+            self.alive = False
+            return
 
         self.position = new_position
 

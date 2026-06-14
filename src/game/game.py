@@ -7,6 +7,7 @@ from src.game.camera import Camera
 from src.game.map import GameMap
 from src.game.player import Player
 from src.game.ui import GameUI
+from src.game.visibility import VisibilitySystem
 
 
 class Game:
@@ -25,15 +26,93 @@ class Game:
 
         self.player = Player(
             player_id=1,
-            position=(300, 300),
+            position=(150, 150),
             team="attackers",
             name="Jackson"
         )
+
+        self.enemies = [
+            # Top-left room
+            Player(
+                player_id=2,
+                position=(500, 500),
+                team="defenders",
+                name="Enemy 1"
+            ),
+
+            # Top-centre corridor
+            Player(
+                player_id=3,
+                position=(1250, 400),
+                team="defenders",
+                name="Enemy 2"
+            ),
+
+            # Top-right room
+            Player(
+                player_id=4,
+                position=(2200, 500),
+                team="defenders",
+                name="Enemy 3"
+            ),
+
+            # Centre structure
+            Player(
+                player_id=5,
+                position=(1350, 1050),
+                team="defenders",
+                name="Enemy 4"
+            ),
+
+            # Right stepped corridor
+            Player(
+                player_id=6,
+                position=(2350, 1100),
+                team="defenders",
+                name="Enemy 5"
+            ),
+
+            # Bottom-left room
+            Player(
+                player_id=7,
+                position=(500, 1600),
+                team="defenders",
+                name="Enemy 6"
+            ),
+
+            # Bottom-centre passage
+            Player(
+                player_id=8,
+                position=(1350, 1500),
+                team="defenders",
+                name="Enemy 7"
+            ),
+
+            # Bottom-right room
+            Player(
+                player_id=9,
+                position=(2300, 1450),
+                team="defenders",
+                name="Enemy 8"
+            ),
+        ]
+
+        self.players = [
+            self.player,
+            *self.enemies
+        ]
+
+        self.players = [
+            self.player,
+            *self.enemies
+        ]
 
         self.game_map = GameMap()
         self.camera = Camera()
         self.ui = GameUI()
         self.bullets = []
+
+        self.visibility = VisibilitySystem()
 
     def run(self) -> None:
         while self.running:
@@ -85,12 +164,14 @@ class Game:
         self.player.move(
             dx * PLAYER_SPEED,
             dy * PLAYER_SPEED,
-            self.game_map.walls
+            self.game_map.walls,
+            self.players
         )
 
     def update(self, delta_time: float) -> None:
         # Update reload and fire-rate timers
-        self.player.update(delta_time)
+        for player in self.players:
+            player.update(delta_time)
 
         # Keep camera centred on the player
         self.camera.update(self.player.hitbox)
@@ -105,7 +186,8 @@ class Game:
         for bullet in self.bullets:
             bullet.update(
                 delta_time,
-                self.game_map.walls
+                self.game_map.walls,
+                self.players
             )
 
         # Remove bullets that are no longer active
@@ -129,7 +211,20 @@ class Game:
                 self.camera
             )
 
-        self.player.draw(
+        for player in self.players:
+            player.draw(
+                self.screen,
+                self.camera
+            )
+
+        self.visibility.draw(
+            self.screen,
+            self.player,
+            self.camera,
+            self.game_map.walls
+        )
+
+        self.game_map.draw(
             self.screen,
             self.camera
         )

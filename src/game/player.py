@@ -13,12 +13,16 @@ class Player:
         self.shield = 0.0
         self.alive = True
 
+        self.respawn_delay = 5.0
+        self.respawn_timer = 0.0
+        self.spawn_position = pygame.Vector2(position)
+
         self.speed = PLAYER_SPEED
 
         self.max_ammo = 30
         self.ammo = self.max_ammo
 
-        self.reload_duration = 3.0
+        self.reload_duration = 2.5
         self.reload_timer = 0.0
         self.is_reloading = False
 
@@ -56,40 +60,60 @@ class Player:
             self.rect.centery + self.hitbox_offset_y
         )
 
-    def move(self, dx, dy, walls):
+    def move(self, dx, dy, walls, players):
+        obstacles = list(walls)
+
+        for player in players:
+            if player is self:
+                continue
+
+            if not player.alive:
+                continue
+
+            obstacles.append(player.hitbox)
+
         # Move horizontally
         self.hitbox.x += dx
 
-        for wall in walls:
-            if self.hitbox.colliderect(wall):
+        for obstacle in obstacles:
+            if self.hitbox.colliderect(obstacle):
                 if dx > 0:
-                    self.hitbox.right = wall.left
+                    self.hitbox.right = obstacle.left
                 elif dx < 0:
-                    self.hitbox.left = wall.right
+                    self.hitbox.left = obstacle.right
 
         # Move vertically
         self.hitbox.y += dy
 
-        for wall in walls:
-            if self.hitbox.colliderect(wall):
+        for obstacle in obstacles:
+            if self.hitbox.colliderect(obstacle):
                 if dy > 0:
-                    self.hitbox.bottom = wall.top
+                    self.hitbox.bottom = obstacle.top
                 elif dy < 0:
-                    self.hitbox.top = wall.bottom
+                    self.hitbox.top = obstacle.bottom
 
-        # Keep the sprite aligned with the offset hitbox
+        # Keep sprite aligned with hitbox
         self.rect.center = (
             self.hitbox.centerx,
             self.hitbox.centery - self.hitbox_offset_y
         )
 
     def update(self, delta_time):
-        # Update firing cooldown
+        if not self.alive:
+            self.respawn_timer -= delta_time
+
+            if self.respawn_timer <= 0:
+                self.respawn()
+
+            return
+
         if self.fire_cooldown > 0:
             self.fire_cooldown -= delta_time
-            self.fire_cooldown = max(0.0, self.fire_cooldown)
+            self.fire_cooldown = max(
+                0.0,
+                self.fire_cooldown
+            )
 
-        # Update reload timer
         if self.is_reloading:
             self.reload_timer -= delta_time
 
@@ -151,6 +175,7 @@ class Player:
 
         if self.health <= 0:
             self.alive = False
+            self.respawn_timer = self.respawn_delay
 
     def get_health(self):
         return self.health
@@ -217,3 +242,24 @@ class Player:
             camera.apply(self.hitbox),
             2
         )
+    
+    def respawn(self):
+        self.health = 100.0
+        self.shield = 0.0
+        self.ammo = self.max_ammo
+
+        self.is_reloading = False
+        self.reload_timer = 0.0
+        self.fire_cooldown = 0.0
+
+        self.hitbox.center = (
+            round(self.spawn_position.x),
+            round(self.spawn_position.y)
+        )
+
+        self.rect.center = (
+            self.hitbox.centerx,
+            self.hitbox.centery - self.hitbox_offset_y
+        )
+
+        self.alive = True
