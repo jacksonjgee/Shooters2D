@@ -1,4 +1,5 @@
 import pygame
+import asyncio
 
 from src.game.player import Player
 from src.game.map import GameMap
@@ -33,13 +34,15 @@ class Game:
             name="Jackson"
         )
 
-    def run(self):
+    async def run(self):
         while self.running:
             dt = self.clock.tick(FPS) / 1000.0
 
             self.handle_events()
             self.update(dt)
             self.draw()
+
+            await asyncio.sleep(0)
 
         pygame.quit()
 
@@ -64,7 +67,7 @@ class Game:
             self.camera,
             self.game_map.walls
         )
-        
+
         self.camera.update(self.player)
 
     def draw(self):
