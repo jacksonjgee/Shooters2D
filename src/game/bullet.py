@@ -1,76 +1,78 @@
 import pygame
 
-from settings import BULLET_SPEED, BULLET_HITBOX_SIZE
+from settings import SHOT_RANGE, TRACER_DURATION, TRACER_WIDTH
 
 
 class Bullet:
-    def __init__(self, position, direction):
-        self.position = pygame.Vector2(position)
+    def __init__(self, position, direction, walls):
+        self.start_position = pygame.Vector2(position)
 
         if direction.length_squared() > 0:
             self.direction = pygame.Vector2(direction).normalize()
         else:
             self.direction = pygame.Vector2(0, 0)
 
-        self.speed = BULLET_SPEED
+        self.end_position = self._find_end_position(walls)
+
+        self.remaining_time = TRACER_DURATION
         self.alive = True
 
-        self.hitbox = pygame.Rect(
-            0,
-            0,
-            BULLET_HITBOX_SIZE,
-            BULLET_HITBOX_SIZE
-        )
-        self.hitbox.center = self.position
-
-    def move(self, dt, walls):
-        start_position = self.position.copy()
-        movement = self.direction * self.speed * dt
-        end_position = start_position + movement
-
-        if self._collides_with_wall(
-            start_position,
-            end_position,
-            walls
-        ):
-            self.alive = False
-            return
-
-        self.position = end_position
-        self.hitbox.center = (
-            round(self.position.x),
-            round(self.position.y)
+    def _find_end_position(self, walls):
+        maximum_end_position = (
+            self.start_position
+            + self.direction * SHOT_RANGE
         )
 
-    def _collides_with_wall(self, start_position, end_position, walls):
+        closest_point = maximum_end_position
+        closest_distance_squared = SHOT_RANGE ** 2
+
         start = (
-            round(start_position.x),
-            round(start_position.y)
+            round(self.start_position.x),
+            round(self.start_position.y)
         )
 
         end = (
-            round(end_position.x),
-            round(end_position.y)
+            round(maximum_end_position.x),
+            round(maximum_end_position.y)
         )
 
         for wall in walls:
-            expanded_wall = wall.inflate(
-                self.hitbox.width,
-                self.hitbox.height
-            )
+            intersection = wall.clipline(start, end)
 
-            if expanded_wall.clipline(start, end):
-                return True
+            if not intersection:
+                continue
 
-        return False
+            wall_entry_point = pygame.Vector2(intersection[0])
 
-    def update(self, dt, walls):
-        self.move(dt, walls)
+            distance_squared = (
+                wall_entry_point - self.start_position
+            ).length_squared()
+
+            if distance_squared < closest_distance_squared:
+                closest_distance_squared = distance_squared
+                closest_point = wall_entry_point
+
+        return closest_point
+
+    def update(self, dt):
+        self.remaining_time -= dt
+
+        if self.remaining_time <= 0:
+            self.alive = False
 
     def draw(self, screen, camera):
-        if self.alive == True:
-            pygame.draw.rect(
-                screen,
-                (255, 220, 50),
-                camera.apply(self.hitbox)
-            )
+        start_screen_position = (
+            self.start_position - camera.offset
+        )
+
+        end_screen_position = (
+            self.end_position - camera.offset
+        )
+
+        pygame.draw.line(
+            screen,
+            (255, 220, 50),
+            start_screen_position,
+            end_screen_position,
+            TRACER_WIDTH
+        )

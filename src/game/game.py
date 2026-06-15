@@ -73,12 +73,13 @@ class Game:
         if self.input_handler.shoot_held:
             bullet = self.player.shoot(
                 self.input_handler.mouse_screen_position,
-                self.camera
+                self.camera,
+                self.game_map.walls
             )
 
             self.entity_manager.add_bullet(bullet)
 
-        self.entity_manager.update(dt, self.game_map.walls)
+        self.entity_manager.update(dt)
 
     def draw(self):
         self.screen.fill((40, 40, 40))

@@ -101,13 +101,17 @@ class Player:
             2
         )
 
-    def shoot(self, mouse_screen_position, camera):
-        mouse_world_position = mouse_screen_position + camera.offset
+    def shoot(self, mouse_screen_position, camera, walls):
+        mouse_world_position = (
+            mouse_screen_position + camera.offset
+        )
+
         direction = mouse_world_position - self.position
 
         return self.weapon.shoot(
             position=self.position.copy(),
-            direction=direction
+            direction=direction,
+            walls=walls
         )
         
         

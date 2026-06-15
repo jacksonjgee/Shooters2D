@@ -16,7 +16,7 @@ class Weapon:
             self.fire_cooldown - dt
         )
 
-    def shoot(self, position, direction):
+    def shoot(self, position, direction, walls):
         if self.fire_cooldown > 0:
             return None
 
@@ -27,5 +27,6 @@ class Weapon:
 
         return Bullet(
             position=position,
-            direction=direction
+            direction=direction,
+            walls=walls
         )
