@@ -1,8 +1,11 @@
 import pygame
+from src.game.weapon import Weapon
 from settings import PLAYER_SIZE, PLAYER_SPEED, PLAYER_HITBOX_SIZE
 
 class Player:
     def __init__(self, player_id, position, team, name):
+        self.weapon = Weapon()
+
         self.player_id = player_id
         self.team = team
         self.name = name
@@ -10,7 +13,7 @@ class Player:
         self.position = pygame.Vector2(position)
         self.speed = PLAYER_SPEED
 
-        self.image_offset = pygame.Vector2(0, -10)
+        self.image_offset = pygame.Vector2(0, -7)
         self.original_image = pygame.image.load(f"assets/{team}.png").convert_alpha()
         self.original_image = pygame.transform.scale(self.original_image,(PLAYER_SIZE, PLAYER_SIZE))
 
@@ -76,9 +79,17 @@ class Player:
 
         self.rect = self.image.get_rect(center=image_center)
 
-    def update(self, dt, movement_direction, mouse_screen_position, camera, walls):
+    def update(
+        self,
+        dt,
+        movement_direction,
+        mouse_screen_position,
+        camera,
+        walls
+    ):
         self.move(dt, movement_direction, walls)
         self.rotate(mouse_screen_position, camera)
+        self.weapon.update(dt)
 
     def draw(self, screen, camera):
         screen.blit(self.image, camera.apply(self.rect))
@@ -89,3 +100,16 @@ class Player:
             camera.apply(self.hitbox),
             2
         )
+
+    def shoot(self, mouse_screen_position, camera):
+        mouse_world_position = mouse_screen_position + camera.offset
+        direction = mouse_world_position - self.position
+
+        return self.weapon.shoot(
+            position=self.position.copy(),
+            direction=direction
+        )
+        
+        
+    
+    

@@ -4,13 +4,17 @@ class InputHandler:
     def __init__(self):
         self.movement_direction = pygame.Vector2(0, 0)
         self.mouse_screen_position = pygame.Vector2(0, 0)
+        self.shoot_held = False
 
     def update(self):
-        self._update_movement_direction()
-        self._update_mouse_position()
-
-    def _update_movement_direction(self):
         keys = pygame.key.get_pressed()
+        mouse_buttons = pygame.mouse.get_pressed()
+
+        self._update_movement_direction(keys)
+        self._update_mouse_position()
+        self._update_shooting_input(mouse_buttons)
+
+    def _update_movement_direction(self, keys):
         direction = pygame.Vector2(0, 0)
 
         if keys[pygame.K_w]:
@@ -34,3 +38,6 @@ class InputHandler:
         self.mouse_screen_position = pygame.Vector2(
             pygame.mouse.get_pos()
         )
+
+    def _update_shooting_input(self, mouse_buttons):
+        self.shoot_held = mouse_buttons[0]
