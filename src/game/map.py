@@ -17,6 +17,6 @@ class GameMap:
             pygame.Rect(900, 600, 40, 300),
         ]
 
-    def draw(self, screen):
+    def draw(self, screen, camera):
         for wall in self.walls:
-            pygame.draw.rect(screen, (100, 100, 100), wall)
+            pygame.draw.rect(screen, (100, 100, 100), camera.apply(wall))

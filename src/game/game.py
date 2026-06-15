@@ -1,6 +1,7 @@
 import pygame
 from src.game.player import Player
 from src.game.map import GameMap
+from src.game.camera import Camera
 from settings import SCREEN_HEIGHT, SCREEN_WIDTH, FPS
 
 
@@ -8,6 +9,7 @@ class Game:
     def __init__(self):
         pygame.init()
         self.game_map = GameMap()
+        self.camera = Camera()
 
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Shooters 2D")
@@ -19,7 +21,7 @@ class Game:
         self.player = Player(
             player_id=1,
             position=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2),
-            team="attacker",
+            team="defender",
             name="Jackson"
         )
 
@@ -43,12 +45,12 @@ class Game:
                     self.running = False
 
     def update(self, dt):
-        keys = pygame.key.get_pressed()
-        self.player.update(dt)
+        self.player.update(dt, self.camera)
+        self.camera.update(self.player)
 
     def draw(self):
         self.screen.fill((40, 40, 40))
-        self.game_map.draw(self.screen)
-        self.player.draw(self.screen)
+        self.game_map.draw(self.screen, self.camera)
+        self.player.draw(self.screen, self.camera)
 
         pygame.display.flip()

@@ -35,9 +35,10 @@ class Player:
         self.position += direction * self.speed * dt
         self.rect.center = self.position
     
-    def rotate(self):
-        mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
-        direction = mouse_pos - self.position
+    def rotate(self, camera):
+        mouse_screen_pos = pygame.Vector2(pygame.mouse.get_pos())
+        mouse_world_pos = mouse_screen_pos + camera.offset
+        direction = mouse_world_pos - self.position
 
         if direction.length_squared() == 0:
             return
@@ -51,9 +52,9 @@ class Player:
 
         self.rect = self.image.get_rect(center=self.position)
 
-    def update(self, dt):
+    def update(self, dt, camera):
         self.move(dt)
-        self.rotate()
+        self.rotate(camera)
 
-    def draw(self, screen):
-        screen.blit(self.image, self.rect)
+    def draw(self, screen, camera):
+        screen.blit(self.image, camera.apply(self.rect))
