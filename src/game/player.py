@@ -20,39 +20,23 @@ class Player:
         self.hitbox = pygame.Rect(0, 0, PLAYER_HITBOX_SIZE, PLAYER_HITBOX_SIZE)
         self.hitbox.center = position
 
-    def move(self, dt, walls):
-        keys = pygame.key.get_pressed()
-        direction = pygame.Vector2(0, 0)
-
-        if keys[pygame.K_w]:
-            direction.y -= 1
-        if keys[pygame.K_s]:
-            direction.y += 1
-        if keys[pygame.K_a]:
-            direction.x -= 1
-        if keys[pygame.K_d]:
-            direction.x += 1
-        
-        if direction.length_squared() > 0:
-            direction = direction.normalize()
-
-        movement = direction * self.speed * dt
-        self.rect.center = self.position
+    def move(self, dt, movement_direction, walls):
+        movement = movement_direction * self.speed * dt
 
         # Horizontal movement
         self.position.x += movement.x
         self.hitbox.centerx = round(self.position.x)
-        self.check_collisions(walls, "x", movement.x)
+        self._check_collisions(walls, "x", movement.x)
 
         # Vertical movement
         self.position.y += movement.y
         self.hitbox.centery = round(self.position.y)
-        self.check_collisions(walls, "y", movement.y)
+        self._check_collisions(walls, "y", movement.y)
 
-        # Keep the image centred on the hitbox
+        # Keep the image centred on the player's final position
         self.rect.center = self.hitbox.center
     
-    def check_collisions(self, walls, axis, movement):
+    def _check_collisions(self, walls, axis, movement):
         for wall in walls:
             if self.hitbox.colliderect(wall):
 
@@ -72,11 +56,10 @@ class Player:
 
                     self.position.y = self.hitbox.centery
     
-    def rotate(self, camera):
-        mouse_screen_pos = pygame.Vector2(pygame.mouse.get_pos())
-        mouse_world_pos = mouse_screen_pos + camera.offset
+    def rotate(self, mouse_screen_position, camera):
+        mouse_world_position = mouse_screen_position + camera.offset
 
-        direction = mouse_world_pos - self.position
+        direction = mouse_world_position - self.position
 
         if direction.length_squared() == 0:
             return
@@ -89,14 +72,13 @@ class Player:
         )
 
         rotated_offset = self.image_offset.rotate(-angle)
-
         image_center = self.position + rotated_offset
 
         self.rect = self.image.get_rect(center=image_center)
 
-    def update(self, dt, camera, walls):
-        self.move(dt, walls)
-        self.rotate(camera)
+    def update(self, dt, movement_direction, mouse_screen_position, camera, walls):
+        self.move(dt, movement_direction, walls)
+        self.rotate(mouse_screen_position, camera)
 
     def draw(self, screen, camera):
         screen.blit(self.image, camera.apply(self.rect))

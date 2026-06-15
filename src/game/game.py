@@ -1,8 +1,15 @@
 import pygame
+
 from src.game.player import Player
 from src.game.map import GameMap
 from src.game.camera import Camera
-from settings import SCREEN_HEIGHT, SCREEN_WIDTH, FPS
+from src.game.input_handler import InputHandler
+
+from settings import (
+    SCREEN_HEIGHT, 
+    SCREEN_WIDTH, 
+    FPS
+    )
 
 
 class Game:
@@ -10,6 +17,7 @@ class Game:
         pygame.init()
         self.game_map = GameMap()
         self.camera = Camera()
+        self.input_handler = InputHandler()
 
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Shooters 2D")
@@ -43,9 +51,20 @@ class Game:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
+    
+
 
     def update(self, dt):
-        self.player.update(dt, self.camera, self.game_map.walls)
+        self.input_handler.update()
+
+        self.player.update(
+            dt,
+            self.input_handler.movement_direction,
+            self.input_handler.mouse_screen_position,
+            self.camera,
+            self.game_map.walls
+        )
+        
         self.camera.update(self.player)
 
     def draw(self):
