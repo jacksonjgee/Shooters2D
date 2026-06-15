@@ -45,7 +45,7 @@ class Game:
                     self.running = False
 
     def update(self, dt):
-        self.player.update(dt, self.camera)
+        self.player.update(dt, self.camera, self.game_map.walls)
         self.camera.update(self.player)
 
     def draw(self):
