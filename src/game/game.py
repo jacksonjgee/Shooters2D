@@ -9,6 +9,8 @@ from src.game.hud import HUD
 from src.network.command_manager import CommandManager
 from src.network.state_manager import StateManager
 from src.network.webrtc_connection import WebRTCConnection
+from src.network.network_session import NetworkSession
+from src.game.lobby import Lobby
 
 from settings import (
     SCREEN_HEIGHT, 
@@ -20,14 +22,21 @@ from settings import (
 class Game:
     def __init__(self):
         pygame.init()
-        pygame.mouse.set_visible(False)
+        pygame.mouse.set_visible(True)
         self.game_map = GameMap()
         self.camera = Camera()
         self.input_handler = InputHandler()
         self.entity_manager = EntityManager()
         self.hud = HUD()
+        self.lobby = Lobby()
+        self.game_mode = "lobby"
+        pygame.key.start_text_input()
 
         self.webrtc_connection = WebRTCConnection()
+
+        self.network_session = NetworkSession(
+            connection=self.webrtc_connection
+        )
 
         self.command_manager = CommandManager(
             connection=self.webrtc_connection
@@ -36,8 +45,6 @@ class Game:
         self.state_manager = StateManager(
             connection=self.webrtc_connection
         )
-
-        self.host_offer_printed = False
 
         print(
             "WebRTC supported:",
@@ -89,45 +96,54 @@ class Game:
 
     def handle_events(self):
         for event in pygame.event.get():
-            self.input_handler.handle_event(event)
-
             if event.type == pygame.QUIT:
                 self.running = False
                 continue
 
-            if event.type != pygame.KEYDOWN:
-                continue
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    self.running = False
+                    continue
 
-            if event.key == pygame.K_ESCAPE:
-                self.running = False
-
-            elif event.key == pygame.K_h:
-                self.webrtc_connection.window.console.log(
-                    "H key detected"
+            if self.game_mode == "lobby":
+                self.lobby.handle_event(
+                    event=event,
+                    network_session=(
+                        self.network_session
+                    )
                 )
 
-                started = (
-                    self.webrtc_connection.start_host()
-                )
-
-                self.webrtc_connection.window.console.log(
-                    "start_host result:",
-                    started
+            elif self.game_mode == "playing":
+                self.input_handler.handle_event(
+                    event
                 )
 
     def update(self, dt):
+        self.network_session.update()
+
+        if self.game_mode == "lobby":
+            next_mode = self.lobby.update(
+                self.network_session
+            )
+
+            if next_mode == "playing":
+                self.game_mode = "playing"
+
+                pygame.key.stop_text_input()
+                pygame.mouse.set_visible(False)
+
+            return
+
         self.input_handler.update()
 
         commands = self._create_player_commands()
 
         role = self.webrtc_connection.get_role()
+
         connected = (
             self.webrtc_connection.is_connected()
         )
 
-        # The host runs the authoritative simulation.
-        # Before connecting, normal local gameplay
-        # continues to work.
         if role != "client" or not connected:
             self.entity_manager.update(
                 dt=dt,
@@ -139,8 +155,6 @@ class Game:
                 dt
             )
 
-        # Host sends states. Client receives and
-        # applies states.
         self.state_manager.update(
             players=self.entity_manager.players,
             entity_manager=self.entity_manager
@@ -154,10 +168,21 @@ class Game:
             controlled_player
         )
 
-        self._update_webrtc_test()
-
     def draw(self):
-        self.screen.fill((40, 40, 40))
+        if self.game_mode == "lobby":
+            self.lobby.draw(
+                screen=self.screen,
+                network_session=(
+                    self.network_session
+                )
+            )
+
+            pygame.display.flip()
+            return
+
+        self.screen.fill(
+            (40, 40, 40)
+        )
 
         controlled_player = (
             self._get_controlled_player()
@@ -177,7 +202,8 @@ class Game:
             screen=self.screen,
             player=controlled_player,
             mouse_screen_position=(
-                self.input_handler.mouse_screen_position
+                self.input_handler
+                    .mouse_screen_position
             ),
             camera=self.camera
         )
@@ -197,40 +223,6 @@ class Game:
             local_player=self.local_player,
             remote_players=remote_players
         )
-    
-    def _update_webrtc_test(self):
-        status = (
-            self.webrtc_connection.get_status()
-        )
-
-        if status == "error":
-            error_message = (
-                self.webrtc_connection
-                .get_error_message()
-            )
-
-            self.webrtc_connection.window.console.error(
-                "WebRTC error:",
-                error_message
-            )
-
-            return
-
-        if (
-            status == "offer_ready"
-            and not self.host_offer_printed
-        ):
-            offer_code = (
-                self.webrtc_connection
-                .get_offer_code()
-            )
-
-            self.webrtc_connection.window.console.log(
-                "Host offer code:",
-                offer_code
-            )
-
-            self.host_offer_printed = True
 
     def _get_controlled_player(self):
         if (
