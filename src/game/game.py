@@ -6,6 +6,7 @@ from src.game.map import GameMap
 from src.game.camera import Camera
 from src.game.input_handler import InputHandler
 from src.game.entity_manager import EntityManager
+from src.game.hud import HUD
 
 from settings import (
     SCREEN_HEIGHT, 
@@ -17,10 +18,12 @@ from settings import (
 class Game:
     def __init__(self):
         pygame.init()
+        pygame.mouse.set_visible(False)
         self.game_map = GameMap()
         self.camera = Camera()
         self.input_handler = InputHandler()
         self.entity_manager = EntityManager()
+        self.hud = HUD()
 
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Shooters 2D")
@@ -50,6 +53,8 @@ class Game:
 
     def handle_events(self):
         for event in pygame.event.get():
+            self.input_handler.handle_event(event)
+
             if event.type == pygame.QUIT:
                 self.running = False
 
@@ -61,11 +66,16 @@ class Game:
         self.input_handler.update()
 
         self.player.update(
-            dt,
-            self.input_handler.movement_direction,
-            self.input_handler.mouse_screen_position,
-            self.camera,
-            self.game_map.walls
+            dt=dt,
+            movement_direction=(
+                self.input_handler.movement_direction
+            ),
+            walking=self.input_handler.walk_toggled,
+            mouse_screen_position=(
+                self.input_handler.mouse_screen_position
+            ),
+            camera=self.camera,
+            walls=self.game_map.walls
         )
 
         self.camera.update(self.player)
@@ -83,7 +93,29 @@ class Game:
 
     def draw(self):
         self.screen.fill((40, 40, 40))
-        self.game_map.draw(self.screen, self.camera)
-        self.player.draw(self.screen, self.camera)
-        self.entity_manager.draw(self.screen, self.camera)
+
+        self.game_map.draw(
+            self.screen,
+            self.camera
+        )
+
+        self.player.draw(
+            self.screen,
+            self.camera
+        )
+
+        self.entity_manager.draw(
+            self.screen,
+            self.camera
+        )
+
+        self.hud.draw(
+            screen=self.screen,
+            player=self.player,
+            mouse_screen_position=(
+                self.input_handler.mouse_screen_position
+            ),
+            camera=self.camera
+        )
+
         pygame.display.flip()

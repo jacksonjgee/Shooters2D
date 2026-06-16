@@ -4,7 +4,9 @@ class InputHandler:
     def __init__(self):
         self.movement_direction = pygame.Vector2(0, 0)
         self.mouse_screen_position = pygame.Vector2(0, 0)
+
         self.shoot_held = False
+        self.walk_toggled = False
 
     def update(self):
         keys = pygame.key.get_pressed()
@@ -41,3 +43,12 @@ class InputHandler:
 
     def _update_shooting_input(self, mouse_buttons):
         self.shoot_held = mouse_buttons[0]
+    
+    def handle_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            if event.key in (
+                pygame.K_LSHIFT,
+                pygame.K_RSHIFT
+            ):
+                self.walk_toggled = not self.walk_toggled
+    
