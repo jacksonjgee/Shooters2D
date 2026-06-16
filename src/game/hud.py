@@ -13,8 +13,16 @@ class HUD:
         self.reticle_line_length = 5
         self.reticle_line_width = 2
 
-        # Temporary movement debug display
         self.debug_font = pygame.font.Font(None, 28)
+
+        self.health_bar_position = (20, 80)
+        self.health_bar_width = 220
+        self.health_bar_height = 28
+
+        self.health_bar_background_colour = (60, 60, 60)
+        self.health_bar_fill_colour = (70, 200, 90)
+        self.health_bar_border_colour = (255, 255, 255)
+        self.health_text_colour = (255, 255, 255)
 
     def draw(
         self,
@@ -41,6 +49,11 @@ class HUD:
         )
 
         self._draw_ammo(
+            screen,
+            player
+        )
+
+        self._draw_health(
             screen,
             player
         )
@@ -203,7 +216,69 @@ class HUD:
             speed_text,
             (20, 20)
         )
-    
+
+    def _draw_health(self, screen, player):
+        health_ratio = (
+            player.health / player.max_health
+        )
+
+        health_ratio = max(
+            0.0,
+            min(health_ratio, 1.0)
+        )
+
+        background_rect = pygame.Rect(
+            self.health_bar_position[0],
+            self.health_bar_position[1],
+            self.health_bar_width,
+            self.health_bar_height
+        )
+
+        fill_width = round(
+            self.health_bar_width * health_ratio
+        )
+
+        fill_rect = pygame.Rect(
+            self.health_bar_position[0],
+            self.health_bar_position[1],
+            fill_width,
+            self.health_bar_height
+        )
+
+        pygame.draw.rect(
+            screen,
+            self.health_bar_background_colour,
+            background_rect
+        )
+
+        pygame.draw.rect(
+            screen,
+            self.health_bar_fill_colour,
+            fill_rect
+        )
+
+        pygame.draw.rect(
+            screen,
+            self.health_bar_border_colour,
+            background_rect,
+            2
+        )
+
+        health_text = self.debug_font.render(
+            f"{player.health} / {player.max_health}",
+            True,
+            self.health_text_colour
+        )
+
+        text_rect = health_text.get_rect(
+            center=background_rect.center
+        )
+
+        screen.blit(
+            health_text,
+            text_rect
+        )
+
     def _draw_ammo(self, screen, player):
         weapon = player.weapon
 

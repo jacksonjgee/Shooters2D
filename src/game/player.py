@@ -215,38 +215,9 @@ class Player:
         if not self.alive:
             return
 
-        screen.blit(
-            self.image,
-            camera.apply(self.rect)
-        )
-
-        pygame.draw.rect(
+        self._draw_sprite(
             screen,
-            (255, 0, 0),
-            camera.apply(self.hitbox),
-            2
-        )
-
-        font = pygame.font.Font(None, 24)
-
-        health_text = font.render(
-            f"{self.health}",
-            True,
-            (255, 255, 255)
-        )
-
-        health_position = (
-            self.hitbox.centerx
-            - camera.offset.x
-            - health_text.get_width() / 2,
-            self.hitbox.top
-            - camera.offset.y
-            - 22
-        )
-
-        screen.blit(
-            health_text,
-            health_position
+            camera
         )
 
     def shoot(
@@ -335,3 +306,43 @@ class Player:
         )
 
         self.rect.center = self.hitbox.center
+
+    def _draw_sprite(self, screen, camera):
+        screen.blit(
+            self.image,
+            camera.apply(self.rect)
+        )
+
+    def _draw_health(self, screen, camera):
+        font = pygame.font.Font(None, 24)
+
+        health_text = font.render(
+            f"{self.health}",
+            True,
+            (255, 255, 255)
+        )
+
+        health_position = (
+            self.hitbox.centerx
+            - camera.offset.x
+            - health_text.get_width() / 2,
+            self.hitbox.top
+            - camera.offset.y
+            - 22
+        )
+
+        screen.blit(
+            health_text,
+            health_position
+        )
+
+    def draw_hitbox(self, screen, camera):
+        if not self.alive:
+            return
+
+        pygame.draw.rect(
+            screen,
+            (255, 0, 0),
+            camera.apply(self.hitbox),
+            2
+        )

@@ -3,9 +3,7 @@ class EntityManager:
         self.bullets = []
         self.players = []
 
-    def draw(self, screen, camera):
-        self.draw_bullets(screen, camera)
-        self.draw_players(screen, camera)
+        self.show_hitboxes = True
 
     def add_bullet(self, bullet):
         if bullet is not None:
@@ -28,10 +26,40 @@ class EntityManager:
             if bullet.alive
         ]
 
-    def draw_players(self, screen, camera):
-        for player in self.players:
-            player.draw(screen, camera)
+    def draw(self, screen, camera):
+        self._draw_players(
+            screen,
+            camera
+        )
 
-    def draw_bullets(self, screen, camera):
+        self._draw_bullets(
+            screen,
+            camera
+        )
+
+        if self.show_hitboxes:
+            self._draw_hitboxes(
+                screen,
+                camera
+            )
+
+    def _draw_players(self, screen, camera):
+        for player in self.players:
+            player.draw(
+                screen,
+                camera
+            )
+
+    def _draw_bullets(self, screen, camera):
         for bullet in self.bullets:
-            bullet.draw(screen, camera)
+            bullet.draw(
+                screen,
+                camera
+            )
+
+    def _draw_hitboxes(self, screen, camera):
+        for player in self.players:
+            player.draw_hitbox(
+                screen,
+                camera
+            )
