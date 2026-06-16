@@ -58,13 +58,11 @@ class Game:
         self.running = True
 
         # Create the player
+        # Create the players at the map spawn points.
         self.local_player = (
             self.entity_manager.create_player(
                 player_id=1,
-                position=(
-                    SCREEN_WIDTH // 2,
-                    SCREEN_HEIGHT // 2
-                ),
+                position=self.game_map.defender_spawn,
                 team="defender",
                 name="Jackson"
             )
@@ -73,10 +71,7 @@ class Game:
         self.enemy_player = (
             self.entity_manager.create_player(
                 player_id=2,
-                position=(
-                    SCREEN_WIDTH // 2 + 100,
-                    SCREEN_HEIGHT // 2 + 100
-                ),
+                position=self.game_map.attacker_spawn,
                 team="attacker",
                 name="Enemy"
             )
