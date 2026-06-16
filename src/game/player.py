@@ -25,6 +25,7 @@ class Player:
         self.alive = True
 
         self.position = pygame.Vector2(position)
+        self.aim_world_position = self.position.copy()
 
         # Movement state
         self.velocity = pygame.Vector2(0, 0)
@@ -215,6 +216,10 @@ class Player:
             players=players
         )
 
+        self.aim_world_position.update(
+            command.aim_world_position
+        )
+
         self.rotate(
             command.aim_world_position
         )
@@ -399,15 +404,26 @@ class Player:
             state.velocity
         )
 
+        self.aim_world_position.update(
+            state.aim_world_position
+        )
+
         self.health = state.health
         self.alive = state.alive
 
         self.weapon.current_ammo = state.ammo
-        self.weapon.is_reloading = state.is_reloading
+        self.weapon.is_reloading = (
+            state.is_reloading
+        )
+        self.weapon.accuracy.current_spread = (
+            state.current_spread
+        )
 
         self.hitbox.center = (
             round(self.position.x),
             round(self.position.y)
         )
 
-        self.rect.center = self.hitbox.center
+        self.rotate(
+            self.aim_world_position
+        )

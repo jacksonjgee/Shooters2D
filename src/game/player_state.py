@@ -11,7 +11,8 @@ class PlayerState:
         health=100,
         alive=True,
         ammo=0,
-        is_reloading=False
+        is_reloading=False,
+        current_spread=0.0
     ):
         if position is None:
             position = pygame.Vector2(0, 0)
@@ -33,6 +34,7 @@ class PlayerState:
         self.alive = alive
         self.ammo = ammo
         self.is_reloading = is_reloading
+        self.current_spread = current_spread
 
     def to_dict(self):
         return {
@@ -46,7 +48,8 @@ class PlayerState:
             "health": self.health,
             "alive": self.alive,
             "ammo": self.ammo,
-            "is_reloading": self.is_reloading
+            "is_reloading": self.is_reloading,
+            "current_spread": self.current_spread
         }
 
     @classmethod
@@ -71,22 +74,29 @@ class PlayerState:
             is_reloading=data.get(
                 "is_reloading",
                 False
+            ),
+            current_spread=data.get(
+                "current_spread",
+                0.0
             )
         )
 
     @classmethod
-    def from_player(
-        cls,
-        player,
-        aim_world_position
-    ):
+    def from_player(cls, player):
         return cls(
             player_id=player.player_id,
             position=player.position,
             velocity=player.velocity,
-            aim_world_position=aim_world_position,
+            aim_world_position=(
+                player.aim_world_position
+            ),
             health=player.health,
             alive=player.alive,
             ammo=player.weapon.current_ammo,
-            is_reloading=player.weapon.is_reloading
+            is_reloading=(
+                player.weapon.is_reloading
+            ),
+            current_spread=(
+                player.weapon.accuracy.current_spread
+            )
         )

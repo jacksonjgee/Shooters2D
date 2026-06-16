@@ -47,6 +47,41 @@ class Bullet:
         self.remaining_time = TRACER_DURATION
         self.alive = True
 
+    @classmethod
+    def create_visual_tracer(
+        cls,
+        start_position,
+        end_position,
+        remaining_time
+    ):
+        bullet = cls.__new__(cls)
+
+        bullet.start_position = pygame.Vector2(
+            start_position
+        )
+
+        bullet.end_position = pygame.Vector2(
+            end_position
+        )
+
+        direction = (
+            bullet.end_position
+            - bullet.start_position
+        )
+
+        if direction.length_squared() > 0:
+            bullet.direction = direction.normalize()
+        else:
+            bullet.direction = pygame.Vector2(0, 0)
+
+        bullet.damage = 0
+        bullet.hit_player = None
+
+        bullet.remaining_time = remaining_time
+        bullet.alive = True
+
+        return bullet
+
     def _find_end_position(
         self,
         walls,

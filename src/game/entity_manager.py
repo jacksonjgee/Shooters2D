@@ -3,13 +3,33 @@ from src.game.player import Player
 class EntityManager:
     def __init__(self):
         self.bullets = []
+        self.new_bullets = []
         self.players = []
 
         self.show_hitboxes = True
 
-    def add_bullet(self, bullet):
-        if bullet is not None:
-            self.bullets.append(bullet)
+    def add_bullet(
+        self,
+        bullet,
+        record_as_new=True
+    ):
+        if bullet is None:
+            return
+
+        self.bullets.append(
+            bullet
+        )
+
+        if record_as_new:
+            self.new_bullets.append(
+                bullet
+            )
+
+    def take_new_bullets(self):
+        bullets = self.new_bullets.copy()
+        self.new_bullets.clear()
+
+        return bullets
 
     def add_player(self, player):
         if player is not None:
@@ -135,3 +155,6 @@ class EntityManager:
             for bullet in self.bullets
             if bullet.alive
         ]
+
+    def update_bullets_only(self, dt):
+        self._update_bullets(dt)

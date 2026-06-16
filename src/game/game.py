@@ -6,9 +6,9 @@ from src.game.camera import Camera
 from src.game.input_handler import InputHandler
 from src.game.entity_manager import EntityManager
 from src.game.hud import HUD
-from src.game.player_command import PlayerCommand
-from src.network.local_connection import LocalConnection
-from src.network.network_message import NetworkMessage
+from src.network.command_manager import CommandManager
+from src.network.state_manager import StateManager
+from src.network.webrtc_connection import WebRTCConnection
 
 from settings import (
     SCREEN_HEIGHT, 
@@ -26,7 +26,23 @@ class Game:
         self.input_handler = InputHandler()
         self.entity_manager = EntityManager()
         self.hud = HUD()
-        self.local_connection = LocalConnection()
+
+        self.webrtc_connection = WebRTCConnection()
+
+        self.command_manager = CommandManager(
+            connection=self.webrtc_connection
+        )
+
+        self.state_manager = StateManager(
+            connection=self.webrtc_connection
+        )
+
+        self.host_offer_printed = False
+
+        print(
+            "WebRTC supported:",
+            self.webrtc_connection.is_supported
+        )
 
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Shooters 2D")
@@ -77,28 +93,75 @@ class Game:
 
             if event.type == pygame.QUIT:
                 self.running = False
+                continue
 
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    self.running = False
+            if event.type != pygame.KEYDOWN:
+                continue
+
+            if event.key == pygame.K_ESCAPE:
+                self.running = False
+
+            elif event.key == pygame.K_h:
+                self.webrtc_connection.window.console.log(
+                    "H key detected"
+                )
+
+                started = (
+                    self.webrtc_connection.start_host()
+                )
+
+                self.webrtc_connection.window.console.log(
+                    "start_host result:",
+                    started
+                )
 
     def update(self, dt):
         self.input_handler.update()
 
         commands = self._create_player_commands()
 
-        self.entity_manager.update(
-            dt=dt,
-            commands=commands,
-            walls=self.game_map.walls
+        role = self.webrtc_connection.get_role()
+        connected = (
+            self.webrtc_connection.is_connected()
+        )
+
+        # The host runs the authoritative simulation.
+        # Before connecting, normal local gameplay
+        # continues to work.
+        if role != "client" or not connected:
+            self.entity_manager.update(
+                dt=dt,
+                commands=commands,
+                walls=self.game_map.walls
+            )
+        else:
+            self.entity_manager.update_bullets_only(
+                dt
+            )
+
+        # Host sends states. Client receives and
+        # applies states.
+        self.state_manager.update(
+            players=self.entity_manager.players,
+            entity_manager=self.entity_manager
+        )
+
+        controlled_player = (
+            self._get_controlled_player()
         )
 
         self.camera.update(
-            self.local_player
+            controlled_player
         )
+
+        self._update_webrtc_test()
 
     def draw(self):
         self.screen.fill((40, 40, 40))
+
+        controlled_player = (
+            self._get_controlled_player()
+        )
 
         self.game_map.draw(
             self.screen,
@@ -112,7 +175,7 @@ class Game:
 
         self.hud.draw(
             screen=self.screen,
-            player=self.local_player,
+            player=controlled_player,
             mouse_screen_position=(
                 self.input_handler.mouse_screen_position
             ),
@@ -122,98 +185,59 @@ class Game:
         pygame.display.flip()
 
     def _create_player_commands(self):
-        local_aim_world_position = (
-            self.input_handler.mouse_screen_position
-            + self.camera.offset
-        )
+        remote_players = [
+            player
+            for player in self.entity_manager.players
+            if player is not self.local_player
+        ]
 
-        local_command = PlayerCommand(
-            movement_direction=(
-                self.input_handler.movement_direction
-            ),
-            walking=self.input_handler.walk_toggled,
-            aim_world_position=(
-                local_aim_world_position
-            ),
-            shooting=self.input_handler.shoot_held,
-            reload_pressed=(
-                self.input_handler.reload_pressed
-            )
-        )
-
-        self.input_handler.reload_pressed = False
-
-        # Temporary simulated command belonging to
-        # the remote/enemy player.
-        simulated_enemy_command = PlayerCommand(
-            aim_world_position=(
-                self.enemy_player.position.copy()
-            )
-        )
-
-        self._send_command_to_host(
-            player_id=self.enemy_player.player_id,
-            command=simulated_enemy_command
-        )
-
-        received_commands = (
-            self._receive_host_commands()
-        )
-
-        enemy_command = received_commands.get(
-            self.enemy_player.player_id,
-            PlayerCommand(
-                aim_world_position=(
-                    self.enemy_player.position.copy()
-                )
-            )
-        )
-
-        return {
-            self.local_player.player_id: local_command,
-            self.enemy_player.player_id: enemy_command
-        }
-    
-    def _send_command_to_host(
-        self,
-        player_id,
-        command
-    ):
-        outgoing_message = NetworkMessage(
-            message_type="player_command",
-            player_id=player_id,
-            data=command.to_dict()
-        )
-
-        self.local_connection.send_to_host(
-            outgoing_message.to_json()
+        return self.command_manager.create_commands(
+            input_handler=self.input_handler,
+            camera=self.camera,
+            local_player=self.local_player,
+            remote_players=remote_players
         )
     
-    def _receive_host_commands(self):
-        received_commands = {}
-
-        received_json_messages = (
-            self.local_connection.receive_for_host()
+    def _update_webrtc_test(self):
+        status = (
+            self.webrtc_connection.get_status()
         )
 
-        for message_json in received_json_messages:
-            received_message = (
-                NetworkMessage.from_json(message_json)
+        if status == "error":
+            error_message = (
+                self.webrtc_connection
+                .get_error_message()
             )
 
-            if (
-                received_message.message_type
-                != "player_command"
-            ):
-                continue
-
-            if received_message.player_id is None:
-                continue
-
-            received_commands[
-                received_message.player_id
-            ] = PlayerCommand.from_dict(
-                received_message.data
+            self.webrtc_connection.window.console.error(
+                "WebRTC error:",
+                error_message
             )
 
-        return received_commands
+            return
+
+        if (
+            status == "offer_ready"
+            and not self.host_offer_printed
+        ):
+            offer_code = (
+                self.webrtc_connection
+                .get_offer_code()
+            )
+
+            self.webrtc_connection.window.console.log(
+                "Host offer code:",
+                offer_code
+            )
+
+            self.host_offer_printed = True
+
+    def _get_controlled_player(self):
+        if (
+            self.webrtc_connection.is_connected()
+            and self.webrtc_connection.get_role()
+            == "client"
+        ):
+            return self.enemy_player
+
+        return self.local_player
