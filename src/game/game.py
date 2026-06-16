@@ -1,12 +1,12 @@
 import pygame
 import asyncio
 
-from src.game.player import Player
 from src.game.map import GameMap
 from src.game.camera import Camera
 from src.game.input_handler import InputHandler
 from src.game.entity_manager import EntityManager
 from src.game.hud import HUD
+from src.game.player_command import PlayerCommand
 
 from settings import (
     SCREEN_HEIGHT, 
@@ -32,29 +32,28 @@ class Game:
         self.running = True
 
         # Create the player
-        self.player = Player(
-            player_id=1,
-            position=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2),
-            team="defender",
-            name="Jackson"
+        self.local_player = (
+            self.entity_manager.create_player(
+                player_id=1,
+                position=(
+                    SCREEN_WIDTH // 2,
+                    SCREEN_HEIGHT // 2
+                ),
+                team="defender",
+                name="Jackson"
+            )
         )
 
-        self.enemy_player = Player(
-            player_id=2,
-            position=(
-                SCREEN_WIDTH // 2 + 100,
-                SCREEN_HEIGHT // 2 + 100
-            ),
-            team="attacker",
-            name="Enemy"
-        )
-
-        self.entity_manager.add_player(
-            self.player
-        )
-
-        self.entity_manager.add_player(
-            self.enemy_player
+        self.enemy_player = (
+            self.entity_manager.create_player(
+                player_id=2,
+                position=(
+                    SCREEN_WIDTH // 2 + 100,
+                    SCREEN_HEIGHT // 2 + 100
+                ),
+                team="attacker",
+                name="Enemy"
+            )
         )
 
     async def run(self):
@@ -83,39 +82,17 @@ class Game:
     def update(self, dt):
         self.input_handler.update()
 
-        self.player.update(
+        commands = self._create_player_commands()
+
+        self.entity_manager.update(
             dt=dt,
-            movement_direction=(
-                self.input_handler.movement_direction
-            ),
-            walking=self.input_handler.walk_toggled,
-            mouse_screen_position=(
-                self.input_handler.mouse_screen_position
-            ),
-            camera=self.camera,
-            walls=self.game_map.walls,
-            players=self.entity_manager.players
+            commands=commands,
+            walls=self.game_map.walls
         )
 
-        if self.input_handler.reload_pressed:
-            self.player.weapon.start_reload()
-            self.input_handler.reload_pressed = False
-
-        self.camera.update(self.player)
-
-        if self.input_handler.shoot_held:
-            bullet = self.player.shoot(
-                mouse_screen_position=(
-                    self.input_handler.mouse_screen_position
-                ),
-                camera=self.camera,
-                walls=self.game_map.walls,
-                players=self.entity_manager.players
-            )
-
-            self.entity_manager.add_bullet(bullet)
-
-        self.entity_manager.update(dt)
+        self.camera.update(
+            self.local_player
+        )
 
     def draw(self):
         self.screen.fill((40, 40, 40))
@@ -132,7 +109,7 @@ class Game:
 
         self.hud.draw(
             screen=self.screen,
-            player=self.player,
+            player=self.local_player,
             mouse_screen_position=(
                 self.input_handler.mouse_screen_position
             ),
@@ -140,3 +117,36 @@ class Game:
         )
 
         pygame.display.flip()
+
+    def _create_player_commands(self):
+        local_aim_world_position = (
+            self.input_handler.mouse_screen_position
+            + self.camera.offset
+        )
+
+        local_command = PlayerCommand(
+            movement_direction=(
+                self.input_handler.movement_direction
+            ),
+            walking=self.input_handler.walk_toggled,
+            aim_world_position=(
+                local_aim_world_position
+            ),
+            shooting=self.input_handler.shoot_held,
+            reload_pressed=(
+                self.input_handler.reload_pressed
+            )
+        )
+
+        self.input_handler.reload_pressed = False
+
+        enemy_command = PlayerCommand(
+            aim_world_position=(
+                self.enemy_player.position.copy()
+            )
+        )
+
+        return {
+            self.local_player.player_id: local_command,
+            self.enemy_player.player_id: enemy_command
+        }

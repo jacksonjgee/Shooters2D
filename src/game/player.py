@@ -155,6 +155,9 @@ class Player:
             if player is self:
                 continue
 
+            if not player.alive:
+                continue
+
             if self.hitbox.colliderect(player.hitbox):
                 self._resolve_collision(
                     obstacle=player.hitbox,
@@ -162,47 +165,58 @@ class Player:
                     movement=movement
                 )
     
-    def rotate(self, mouse_screen_position, camera):
-        mouse_world_position = mouse_screen_position + camera.offset
-
-        direction = mouse_world_position - self.position
+    def rotate(self, aim_world_position):
+        direction = (
+            aim_world_position - self.position
+        )
 
         if direction.length_squared() == 0:
             return
 
-        angle = direction.angle_to(pygame.Vector2(1, 0)) - 90
+        angle = (
+            direction.angle_to(
+                pygame.Vector2(1, 0)
+            )
+            - 90
+        )
 
         self.image = pygame.transform.rotate(
             self.original_image,
             angle
         )
 
-        rotated_offset = self.image_offset.rotate(-angle)
-        image_center = self.position + rotated_offset
+        rotated_offset = self.image_offset.rotate(
+            -angle
+        )
 
-        self.rect = self.image.get_rect(center=image_center)
+        image_center = (
+            self.position + rotated_offset
+        )
+
+        self.rect = self.image.get_rect(
+            center=image_center
+        )
 
     def update(
         self,
         dt,
-        movement_direction,
-        walking,
-        mouse_screen_position,
-        camera,
+        command,
         walls,
         players
     ):
+        if not self.alive:
+            return
+
         self.move(
             dt=dt,
-            movement_direction=movement_direction,
-            walking=walking,
+            movement_direction=command.movement_direction,
+            walking=command.walking,
             walls=walls,
             players=players
         )
 
         self.rotate(
-            mouse_screen_position,
-            camera
+            command.aim_world_position
         )
 
         self.weapon.update(
@@ -222,17 +236,15 @@ class Player:
 
     def shoot(
         self,
-        mouse_screen_position,
-        camera,
+        aim_world_position,
         walls,
         players
     ):
-        mouse_world_position = (
-            mouse_screen_position + camera.offset
-        )
+        if not self.alive:
+            return None
 
         direction = (
-            mouse_world_position - self.position
+            aim_world_position - self.position
         )
 
         return self.weapon.shoot(
@@ -300,12 +312,17 @@ class Player:
             self.spawn_position
         )
 
+        self.velocity.update(0, 0)
+
         self.hitbox.center = (
             round(self.position.x),
             round(self.position.y)
         )
 
         self.rect.center = self.hitbox.center
+
+        # Give the respawned player a fresh weapon.
+        self.weapon = Weapon()
 
     def _draw_sprite(self, screen, camera):
         screen.blit(
@@ -346,3 +363,26 @@ class Player:
             camera.apply(self.hitbox),
             2
         )
+    
+    def process_actions(
+        self,
+        command,
+        walls,
+        players
+    ):
+        if not self.alive:
+            return None
+
+        if command.reload_pressed:
+            self.weapon.start_reload()
+
+        if command.shooting:
+            return self.shoot(
+                aim_world_position=(
+                    command.aim_world_position
+                ),
+                walls=walls,
+                players=players
+            )
+
+        return None

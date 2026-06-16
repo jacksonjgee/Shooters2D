@@ -1,0 +1,80 @@
+import pygame
+
+
+class PlayerState:
+    def __init__(
+        self,
+        player_id,
+        position=None,
+        velocity=None,
+        health=100,
+        alive=True,
+        ammo=0,
+        is_reloading=False
+    ):
+        if position is None:
+            position = pygame.Vector2(0, 0)
+
+        if velocity is None:
+            velocity = pygame.Vector2(0, 0)
+
+        self.player_id = player_id
+
+        self.position = pygame.Vector2(
+            position
+        )
+
+        self.velocity = pygame.Vector2(
+            velocity
+        )
+
+        self.health = health
+        self.alive = alive
+        self.ammo = ammo
+        self.is_reloading = is_reloading
+
+    def to_dict(self):
+        return {
+            "player_id": self.player_id,
+            "position_x": self.position.x,
+            "position_y": self.position.y,
+            "velocity_x": self.velocity.x,
+            "velocity_y": self.velocity.y,
+            "health": self.health,
+            "alive": self.alive,
+            "ammo": self.ammo,
+            "is_reloading": self.is_reloading
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            player_id=data["player_id"],
+            position=pygame.Vector2(
+                data.get("position_x", 0.0),
+                data.get("position_y", 0.0)
+            ),
+            velocity=pygame.Vector2(
+                data.get("velocity_x", 0.0),
+                data.get("velocity_y", 0.0)
+            ),
+            health=data.get("health", 100),
+            alive=data.get("alive", True),
+            ammo=data.get("ammo", 0),
+            is_reloading=data.get(
+                "is_reloading",
+                False
+            )
+        )
+
+    @classmethod
+    def from_player(cls, player):
+        return cls(
+            player_id=player.player_id,
+            position=player.position,
+            velocity=player.velocity,
+            health=player.health,
+            alive=player.alive,
+            ammo=player.weapon.current_ammo,
+            is_reloading=player.weapon.is_reloading
+        )
