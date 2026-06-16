@@ -6,6 +6,8 @@ from settings import (
     PLAYER_RUN_SPEED,
     PLAYER_WALK_SPEED,
     PLAYER_HITBOX_SIZE,
+    PLAYER_MAX_HEALTH,
+    PLAYER_RESPAWN_DELAY,
     PLAYER_ACCELERATION,
     PLAYER_FRICTION
 )
@@ -18,10 +20,19 @@ class Player:
         self.team = team
         self.name = name
 
+        self.max_health = PLAYER_MAX_HEALTH
+        self.health = self.max_health
+        self.alive = True
+
         self.position = pygame.Vector2(position)
 
         # Movement state
         self.velocity = pygame.Vector2(0, 0)
+
+        self.spawn_position = pygame.Vector2(position)
+
+        self.respawn_delay = PLAYER_RESPAWN_DELAY
+        self.respawn_timer = 0.0
 
         self.run_speed = PLAYER_RUN_SPEED
         self.walk_speed = PLAYER_WALK_SPEED
@@ -52,14 +63,13 @@ class Player:
         )
         self.hitbox.center = position
 
-        self.debug_font = pygame.font.Font(None, 28) # temporary
-
     def move(
         self,
         dt,
         movement_direction,
         walking,
-        walls
+        walls,
+        players
     ):
         if walking:
             self.max_speed = self.walk_speed
@@ -105,45 +115,52 @@ class Player:
         # Horizontal movement
         self.position.x += movement.x
         self.hitbox.centerx = round(self.position.x)
+
         self._check_collisions(
-            walls,
-            "x",
-            movement.x
+            walls=walls,
+            players=players,
+            axis="x",
+            movement=movement.x
         )
 
         # Vertical movement
         self.position.y += movement.y
         self.hitbox.centery = round(self.position.y)
+
         self._check_collisions(
-            walls,
-            "y",
-            movement.y
+            walls=walls,
+            players=players,
+            axis="y",
+            movement=movement.y
         )
 
         self.rect.center = self.hitbox.center
     
-    def _check_collisions(self, walls, axis, movement):
+    def _check_collisions(
+        self,
+        walls,
+        players,
+        axis,
+        movement
+    ):
         for wall in walls:
-            if not self.hitbox.colliderect(wall):
+            if self.hitbox.colliderect(wall):
+                self._resolve_collision(
+                    obstacle=wall,
+                    axis=axis,
+                    movement=movement
+                )
+
+        for player in players:
+            if player is self:
                 continue
 
-            if axis == "x":
-                if movement > 0:
-                    self.hitbox.right = wall.left
-                elif movement < 0:
-                    self.hitbox.left = wall.right
-
-                self.position.x = self.hitbox.centerx
-                self.velocity.x = 0
-
-            elif axis == "y":
-                if movement > 0:
-                    self.hitbox.bottom = wall.top
-                elif movement < 0:
-                    self.hitbox.top = wall.bottom
-
-                self.position.y = self.hitbox.centery
-                self.velocity.y = 0
+            if self.hitbox.colliderect(player.hitbox):
+                self._resolve_collision(
+                    obstacle=player.hitbox,
+                    axis=axis,
+                    movement=movement
+                )
     
     def rotate(self, mouse_screen_position, camera):
         mouse_world_position = mouse_screen_position + camera.offset
@@ -172,13 +189,15 @@ class Player:
         walking,
         mouse_screen_position,
         camera,
-        walls
+        walls,
+        players
     ):
         self.move(
             dt=dt,
             movement_direction=movement_direction,
             walking=walking,
-            walls=walls
+            walls=walls,
+            players=players
         )
 
         self.rotate(
@@ -193,6 +212,9 @@ class Player:
         )
 
     def draw(self, screen, camera):
+        if not self.alive:
+            return
+
         screen.blit(
             self.image,
             camera.apply(self.rect)
@@ -205,32 +227,111 @@ class Player:
             2
         )
 
-        current_speed = self.velocity.length()
+        font = pygame.font.Font(None, 24)
 
-        speed_text = self.debug_font.render(
-            f"Speed: {current_speed:.1f}",
+        health_text = font.render(
+            f"{self.health}",
             True,
             (255, 255, 255)
         )
 
-        screen.blit(
-            speed_text,
-            (20, 20)
+        health_position = (
+            self.hitbox.centerx
+            - camera.offset.x
+            - health_text.get_width() / 2,
+            self.hitbox.top
+            - camera.offset.y
+            - 22
         )
 
-    def shoot(self, mouse_screen_position, camera, walls):
+        screen.blit(
+            health_text,
+            health_position
+        )
+
+    def shoot(
+        self,
+        mouse_screen_position,
+        camera,
+        walls,
+        players
+    ):
         mouse_world_position = (
             mouse_screen_position + camera.offset
         )
 
-        direction = mouse_world_position - self.position
+        direction = (
+            mouse_world_position - self.position
+        )
 
         return self.weapon.shoot(
             position=self.position.copy(),
             direction=direction,
-            walls=walls
+            walls=walls,
+            players=players,
+            shooter=self
         )
-        
-        
+
+    def _resolve_collision(
+        self,
+        obstacle,
+        axis,
+        movement
+    ):
+        if axis == "x":
+            if movement > 0:
+                self.hitbox.right = obstacle.left
+            elif movement < 0:
+                self.hitbox.left = obstacle.right
+
+            self.position.x = self.hitbox.centerx
+            self.velocity.x = 0
+
+        elif axis == "y":
+            if movement > 0:
+                self.hitbox.bottom = obstacle.top
+            elif movement < 0:
+                self.hitbox.top = obstacle.bottom
+
+            self.position.y = self.hitbox.centery
+            self.velocity.y = 0
+
+    def take_damage(self, amount):
+        if not self.alive:
+            return
+
+        self.health = max(
+            0,
+            self.health - amount
+        )
+
+        if self.health <= 0:
+            self.alive = False
+            self.velocity.update(0, 0)
+            self.respawn_timer = self.respawn_delay
     
-    
+    def update_respawn(self, dt):
+        if self.alive:
+            return
+
+        self.respawn_timer = max(
+            0.0,
+            self.respawn_timer - dt
+        )
+
+        if self.respawn_timer > 0:
+            return
+
+        self.health = self.max_health
+        self.alive = True
+
+        self.position.update(
+            self.spawn_position
+        )
+
+        self.hitbox.center = (
+            round(self.position.x),
+            round(self.position.y)
+        )
+
+        self.rect.center = self.hitbox.center

@@ -7,6 +7,7 @@ class InputHandler:
 
         self.shoot_held = False
         self.walk_toggled = False
+        self.reload_pressed = False
 
     def update(self):
         keys = pygame.key.get_pressed()
@@ -45,10 +46,15 @@ class InputHandler:
         self.shoot_held = mouse_buttons[0]
     
     def handle_event(self, event):
-        if event.type == pygame.KEYDOWN:
-            if event.key in (
-                pygame.K_LSHIFT,
-                pygame.K_RSHIFT
-            ):
-                self.walk_toggled = not self.walk_toggled
+        if event.type != pygame.KEYDOWN:
+            return
+
+        if event.key in (
+            pygame.K_LSHIFT,
+            pygame.K_RSHIFT
+        ):
+            self.walk_toggled = not self.walk_toggled
+
+        elif event.key == pygame.K_r:
+            self.reload_pressed = True
     

@@ -39,6 +39,24 @@ class Game:
             name="Jackson"
         )
 
+        self.enemy_player = Player(
+            player_id=2,
+            position=(
+                SCREEN_WIDTH // 2 + 100,
+                SCREEN_HEIGHT // 2 + 100
+            ),
+            team="attacker",
+            name="Enemy"
+        )
+
+        self.entity_manager.add_player(
+            self.player
+        )
+
+        self.entity_manager.add_player(
+            self.enemy_player
+        )
+
     async def run(self):
         while self.running:
             dt = self.clock.tick(FPS) / 1000.0
@@ -75,16 +93,24 @@ class Game:
                 self.input_handler.mouse_screen_position
             ),
             camera=self.camera,
-            walls=self.game_map.walls
+            walls=self.game_map.walls,
+            players=self.entity_manager.players
         )
+
+        if self.input_handler.reload_pressed:
+            self.player.weapon.start_reload()
+            self.input_handler.reload_pressed = False
 
         self.camera.update(self.player)
 
         if self.input_handler.shoot_held:
             bullet = self.player.shoot(
-                self.input_handler.mouse_screen_position,
-                self.camera,
-                self.game_map.walls
+                mouse_screen_position=(
+                    self.input_handler.mouse_screen_position
+                ),
+                camera=self.camera,
+                walls=self.game_map.walls,
+                players=self.entity_manager.players
             )
 
             self.entity_manager.add_bullet(bullet)
@@ -95,11 +121,6 @@ class Game:
         self.screen.fill((40, 40, 40))
 
         self.game_map.draw(
-            self.screen,
-            self.camera
-        )
-
-        self.player.draw(
             self.screen,
             self.camera
         )
