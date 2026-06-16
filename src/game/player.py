@@ -386,3 +386,28 @@ class Player:
             )
 
         return None
+    
+    def apply_state(self, state):
+        if state.player_id != self.player_id:
+            return
+
+        self.position.update(
+            state.position
+        )
+
+        self.velocity.update(
+            state.velocity
+        )
+
+        self.health = state.health
+        self.alive = state.alive
+
+        self.weapon.current_ammo = state.ammo
+        self.weapon.is_reloading = state.is_reloading
+
+        self.hitbox.center = (
+            round(self.position.x),
+            round(self.position.y)
+        )
+
+        self.rect.center = self.hitbox.center

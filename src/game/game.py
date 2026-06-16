@@ -7,6 +7,8 @@ from src.game.input_handler import InputHandler
 from src.game.entity_manager import EntityManager
 from src.game.hud import HUD
 from src.game.player_command import PlayerCommand
+from src.network.local_connection import LocalConnection
+from src.network.network_message import NetworkMessage
 
 from settings import (
     SCREEN_HEIGHT, 
@@ -24,6 +26,7 @@ class Game:
         self.input_handler = InputHandler()
         self.entity_manager = EntityManager()
         self.hud = HUD()
+        self.local_connection = LocalConnection()
 
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Shooters 2D")
@@ -140,9 +143,29 @@ class Game:
 
         self.input_handler.reload_pressed = False
 
-        enemy_command = PlayerCommand(
+        # Temporary simulated command belonging to
+        # the remote/enemy player.
+        simulated_enemy_command = PlayerCommand(
             aim_world_position=(
                 self.enemy_player.position.copy()
+            )
+        )
+
+        self._send_command_to_host(
+            player_id=self.enemy_player.player_id,
+            command=simulated_enemy_command
+        )
+
+        received_commands = (
+            self._receive_host_commands()
+        )
+
+        enemy_command = received_commands.get(
+            self.enemy_player.player_id,
+            PlayerCommand(
+                aim_world_position=(
+                    self.enemy_player.position.copy()
+                )
             )
         )
 
@@ -150,3 +173,47 @@ class Game:
             self.local_player.player_id: local_command,
             self.enemy_player.player_id: enemy_command
         }
+    
+    def _send_command_to_host(
+        self,
+        player_id,
+        command
+    ):
+        outgoing_message = NetworkMessage(
+            message_type="player_command",
+            player_id=player_id,
+            data=command.to_dict()
+        )
+
+        self.local_connection.send_to_host(
+            outgoing_message.to_json()
+        )
+    
+    def _receive_host_commands(self):
+        received_commands = {}
+
+        received_json_messages = (
+            self.local_connection.receive_for_host()
+        )
+
+        for message_json in received_json_messages:
+            received_message = (
+                NetworkMessage.from_json(message_json)
+            )
+
+            if (
+                received_message.message_type
+                != "player_command"
+            ):
+                continue
+
+            if received_message.player_id is None:
+                continue
+
+            received_commands[
+                received_message.player_id
+            ] = PlayerCommand.from_dict(
+                received_message.data
+            )
+
+        return received_commands

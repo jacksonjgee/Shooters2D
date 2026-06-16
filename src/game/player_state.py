@@ -7,6 +7,7 @@ class PlayerState:
         player_id,
         position=None,
         velocity=None,
+        aim_world_position=None,
         health=100,
         alive=True,
         ammo=0,
@@ -18,14 +19,14 @@ class PlayerState:
         if velocity is None:
             velocity = pygame.Vector2(0, 0)
 
+        if aim_world_position is None:
+            aim_world_position = pygame.Vector2(0, 0)
+
         self.player_id = player_id
-
-        self.position = pygame.Vector2(
-            position
-        )
-
-        self.velocity = pygame.Vector2(
-            velocity
+        self.position = pygame.Vector2(position)
+        self.velocity = pygame.Vector2(velocity)
+        self.aim_world_position = pygame.Vector2(
+            aim_world_position
         )
 
         self.health = health
@@ -40,6 +41,8 @@ class PlayerState:
             "position_y": self.position.y,
             "velocity_x": self.velocity.x,
             "velocity_y": self.velocity.y,
+            "aim_x": self.aim_world_position.x,
+            "aim_y": self.aim_world_position.y,
             "health": self.health,
             "alive": self.alive,
             "ammo": self.ammo,
@@ -58,6 +61,10 @@ class PlayerState:
                 data.get("velocity_x", 0.0),
                 data.get("velocity_y", 0.0)
             ),
+            aim_world_position=pygame.Vector2(
+                data.get("aim_x", 0.0),
+                data.get("aim_y", 0.0)
+            ),
             health=data.get("health", 100),
             alive=data.get("alive", True),
             ammo=data.get("ammo", 0),
@@ -68,11 +75,16 @@ class PlayerState:
         )
 
     @classmethod
-    def from_player(cls, player):
+    def from_player(
+        cls,
+        player,
+        aim_world_position
+    ):
         return cls(
             player_id=player.player_id,
             position=player.position,
             velocity=player.velocity,
+            aim_world_position=aim_world_position,
             health=player.health,
             alive=player.alive,
             ammo=player.weapon.current_ammo,

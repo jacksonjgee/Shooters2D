@@ -1,7 +1,5 @@
 import pygame
 
-from src.game.player_command import PlayerCommand
-
 class InputHandler:
     def __init__(self):
         self.movement_direction = pygame.Vector2(0, 0)
@@ -48,6 +46,7 @@ class InputHandler:
         self.shoot_held = mouse_buttons[0]
     
     def handle_event(self, event):
+
         if event.type != pygame.KEYDOWN:
             return
 
@@ -59,18 +58,3 @@ class InputHandler:
 
         elif event.key == pygame.K_r:
             self.reload_pressed = True
-    
-    def create_player_command(self):
-        command = PlayerCommand(
-            movement_direction=self.movement_direction,
-            walking=self.walk_toggled,
-            aim_screen_position=self.mouse_screen_position,
-            shooting=self.shoot_held,
-            reload_pressed=self.reload_pressed
-        )
-
-        # Reload is a one-time action, so consume it
-        # after placing it inside the command.
-        self.reload_pressed = False
-
-        return command
