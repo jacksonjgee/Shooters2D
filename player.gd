@@ -14,12 +14,16 @@ var health = 100
 
 @export var attacker_texture: Texture2D = preload("res://assets/player/attacker.png")
 @export var defender_texture: Texture2D = preload("res://assets/player/defender.png")
+@export var is_local_player: bool = false
 
 
 func _ready():
 	update_team_sprite()
 
 func _process(_delta: float) -> void:
+	if !is_local_player:
+		return
+	
 	if Input.is_action_just_pressed("left_click"):
 		var direction: Vector2 = global_position.direction_to(
 			get_global_mouse_position()
@@ -28,6 +32,9 @@ func _process(_delta: float) -> void:
 		shoot(direction)
 
 func _physics_process(_delta):
+	if !is_local_player:
+		return
+	
 	var direction = Vector2.ZERO
 
 	if Input.is_action_pressed("move_right"):
@@ -101,5 +108,16 @@ func take_damage(amount: int) -> void:
 		die()
 
 func die() -> void:
-	queue_free()
+	visible = false
+	set_physics_process(false)
+	set_process(false)
+
+	await get_tree().create_timer(2.0).timeout
+
+	health = 100
+	global_position = Vector2(0, 0)
+
+	visible = true
+	set_physics_process(true)
+	set_process(true)
 	

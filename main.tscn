@@ -8,6 +8,7 @@ size = Vector2(209, 191)
 [node name="Main" type="Node2D" unique_id=1175662267]
 
 [node name="Player" parent="." unique_id=355129472 instance=ExtResource("1_ig7tw")]
+is_local_player = true
 
 [node name="Map" type="Node2D" parent="." unique_id=408397509]
 position = Vector2(1, 0)
