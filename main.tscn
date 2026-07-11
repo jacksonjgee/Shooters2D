@@ -4,7 +4,7 @@
 [ext_resource type="Texture2D" uid="uid://8b4epmv1vmgk" path="res://assets/player/attacker.png" id="2_h2yge"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_b8y50"]
-radius = 22.0
+radius = 21.023796
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_b8y50"]
 size = Vector2(209, 191)
@@ -24,6 +24,10 @@ texture = ExtResource("2_h2yge")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=543314463]
 position = Vector2(-8, 0)
 shape = SubResource("CircleShape2D_b8y50")
+
+[node name="BulletTracer" type="Line2D" parent="Player" unique_id=1508795641]
+width = 3.0
+default_color = Color(1, 1, 1, 0.29411766)
 
 [node name="Map" type="Node2D" parent="." unique_id=408397509]
 position = Vector2(1, 0)
