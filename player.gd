@@ -8,78 +8,99 @@ enum Teams {
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var bullet_tracer: Line2D = $BulletTracer
 
-var speed = 300
-var health = 100
 @export var team: Teams = Teams.ATTACKER
-
-@export var attacker_texture: Texture2D = preload("res://assets/player/attacker.png")
-@export var defender_texture: Texture2D = preload("res://assets/player/defender.png")
 @export var is_local_player: bool = false
 
+@export var attacker_texture: Texture2D = preload(
+	"res://assets/player/attacker.png"
+)
+@export var defender_texture: Texture2D = preload(
+	"res://assets/player/defender.png"
+)
 
-func _ready():
+var speed: float = 300.0
+var health: int = 100
+
+
+func _ready() -> void:
 	update_team_sprite()
 
+
+# ---------------------------------
+# LOCAL INPUT
+# ---------------------------------
+
 func _process(_delta: float) -> void:
-	if !is_local_player:
+	if not is_local_player:
 		return
-	
+
+	handle_aim_input()
+	handle_shoot_input()
+
+
+func _physics_process(_delta: float) -> void:
+	if not is_local_player:
+		return
+
+	handle_movement_input()
+
+
+func handle_movement_input() -> void:
+	var direction := Input.get_vector(
+		"move_left",
+		"move_right",
+		"move_up",
+		"move_down"
+	)
+
+	move_player(direction)
+
+
+func handle_aim_input() -> void:
+	aim_at(get_global_mouse_position())
+
+
+func handle_shoot_input() -> void:
 	if Input.is_action_just_pressed("left_click"):
-		var direction: Vector2 = global_position.direction_to(
-			get_global_mouse_position()
-		)
+		var target_position := get_global_mouse_position()
+		shoot_at(target_position)
 
-		shoot(direction)
 
-func _physics_process(_delta):
-	if !is_local_player:
-		return
-	
-	var direction = Vector2.ZERO
+# ---------------------------------
+# PLAYER ACTIONS
+# ---------------------------------
 
-	if Input.is_action_pressed("move_right"):
-		direction.x += 1
-
-	if Input.is_action_pressed("move_left"):
-		direction.x -= 1
-
-	if Input.is_action_pressed("move_down"):
-		direction.y += 1
-
-	if Input.is_action_pressed("move_up"):
-		direction.y -= 1
-
-	if direction.length() > 0:
-		direction = direction.normalized()
-
+func move_player(direction: Vector2) -> void:
 	velocity = direction * speed
 	move_and_slide()
 
-	look_at(get_global_mouse_position())
-	
-func update_team_sprite():
-	match team:
-		Teams.ATTACKER:
-			sprite.texture = attacker_texture
 
-		Teams.DEFENDER:
-			sprite.texture = defender_texture
+func aim_at(target_position: Vector2) -> void:
+	look_at(target_position)
+
+
+func shoot_at(target_position: Vector2) -> void:
+	var direction := global_position.direction_to(target_position)
+	shoot(direction)
+
 
 func shoot(direction: Vector2) -> void:
 	var start_position: Vector2 = global_position
 	var ray_length: float = 1000.0
 	var end_position: Vector2 = start_position + direction * ray_length
 
-	var query = PhysicsRayQueryParameters2D.create(
+	var query := PhysicsRayQueryParameters2D.create(
 		start_position,
 		end_position
 	)
 
 	query.exclude = [self]
 
-	var result = get_world_2d().direct_space_state.intersect_ray(query)
+	var result := get_world_2d().direct_space_state.intersect_ray(query)
 
 	if result:
+		end_position = result.position
+
 		var object_hit = result.collider
 
 		print("Hit: ", object_hit)
@@ -90,7 +111,24 @@ func shoot(direction: Vector2) -> void:
 
 	show_tracer(start_position, end_position)
 
-func show_tracer(start_position: Vector2, end_position: Vector2) -> void:
+
+# ---------------------------------
+# VISUALS
+# ---------------------------------
+
+func update_team_sprite() -> void:
+	match team:
+		Teams.ATTACKER:
+			sprite.texture = attacker_texture
+
+		Teams.DEFENDER:
+			sprite.texture = defender_texture
+
+
+func show_tracer(
+	start_position: Vector2,
+	end_position: Vector2
+) -> void:
 	bullet_tracer.clear_points()
 
 	bullet_tracer.add_point(to_local(start_position))
@@ -100,12 +138,18 @@ func show_tracer(start_position: Vector2, end_position: Vector2) -> void:
 
 	bullet_tracer.clear_points()
 
+
+# ---------------------------------
+# HEALTH AND DEATH
+# ---------------------------------
+
 func take_damage(amount: int) -> void:
 	health -= amount
-	print(health)
-	
+	print("Health: ", health)
+
 	if health <= 0:
 		die()
+
 
 func die() -> void:
 	visible = false
@@ -115,9 +159,8 @@ func die() -> void:
 	await get_tree().create_timer(2.0).timeout
 
 	health = 100
-	global_position = Vector2(0, 0)
+	global_position = Vector2.ZERO
 
 	visible = true
 	set_physics_process(true)
 	set_process(true)
-	
