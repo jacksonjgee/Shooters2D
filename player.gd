@@ -73,7 +73,13 @@ func shoot(direction: Vector2) -> void:
 	var result = get_world_2d().direct_space_state.intersect_ray(query)
 
 	if result:
-		end_position = result.position
+		var object_hit = result.collider
+
+		print("Hit: ", object_hit)
+
+		if object_hit.is_in_group("players"):
+			if object_hit.team != team:
+				object_hit.take_damage(25)
 
 	show_tracer(start_position, end_position)
 
@@ -83,12 +89,12 @@ func show_tracer(start_position: Vector2, end_position: Vector2) -> void:
 	bullet_tracer.add_point(to_local(start_position))
 	bullet_tracer.add_point(to_local(end_position))
 
-	await get_tree().create_timer(0.05).timeout
+	await get_tree().create_timer(0.03).timeout
 
 	bullet_tracer.clear_points()
 
 func take_damage(amount: int) -> void:
-	health =- amount
+	health -= amount
 	print(health)
 	
 	if health <= 0:

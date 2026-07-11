@@ -1,32 +1,13 @@
 [gd_scene format=3 uid="uid://c52m2pr5q52n7"]
 
-[ext_resource type="Script" uid="uid://cp8tqtrv3k5cn" path="res://player.gd" id="1_0xm2m"]
-[ext_resource type="Texture2D" uid="uid://8b4epmv1vmgk" path="res://assets/player/attacker.png" id="2_h2yge"]
-
-[sub_resource type="CircleShape2D" id="CircleShape2D_b8y50"]
-radius = 19.0
+[ext_resource type="PackedScene" uid="uid://ch7ygib0576ld" path="res://player.tscn" id="1_ig7tw"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_b8y50"]
 size = Vector2(209, 191)
 
 [node name="Main" type="Node2D" unique_id=1175662267]
 
-[node name="Player" type="CharacterBody2D" parent="." unique_id=1599108268]
-script = ExtResource("1_0xm2m")
-
-[node name="Sprite2D" type="Sprite2D" parent="Player" unique_id=1562947089]
-rotation = 1.5707964
-texture = ExtResource("2_h2yge")
-
-[node name="Camera2D" type="Camera2D" parent="Player" unique_id=902290572]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=543314463]
-position = Vector2(-8, 0)
-shape = SubResource("CircleShape2D_b8y50")
-
-[node name="BulletTracer" type="Line2D" parent="Player" unique_id=1508795641]
-width = 3.0
-default_color = Color(1, 1, 1, 0.29411766)
+[node name="Player" parent="." unique_id=355129472 instance=ExtResource("1_ig7tw")]
 
 [node name="Map" type="Node2D" parent="." unique_id=408397509]
 position = Vector2(1, 0)
@@ -44,3 +25,7 @@ offset_top = -229.0
 offset_right = 238.0
 offset_bottom = -41.0
 color = Color(0.11674089, 0.116740905, 0.11674089, 1)
+
+[node name="Player2" parent="." unique_id=1748109231 instance=ExtResource("1_ig7tw")]
+position = Vector2(452, -106)
+team = 1
