@@ -86,3 +86,14 @@ func show_tracer(start_position: Vector2, end_position: Vector2) -> void:
 	await get_tree().create_timer(0.05).timeout
 
 	bullet_tracer.clear_points()
+
+func take_damage(amount: int) -> void:
+	health =- amount
+	print(health)
+	
+	if health <= 0:
+		die()
+
+func die() -> void:
+	queue_free()
+	
